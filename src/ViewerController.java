@@ -1,5 +1,3 @@
-package sample;
-
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
@@ -26,6 +24,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 
+/**
+ * Klasa kontrolera graficznego interfejsu użytkownika.
+ * @author Jacek Polak
+ * @author Bartłomiej Bielecki
+ * @author Wojciech Darowski
+ * @since 22.11.2016
+ * @version 3.1
+ */
 public class ViewerController implements Initializable {
 
     //region COMPONENTS
@@ -52,7 +58,7 @@ public class ViewerController implements Initializable {
 
 
     private String OIDstring;
-    private SimpleSnmpClient client;
+    private SnmpClient client;
     private ArrayList<String> colsNames = new ArrayList<>();
     public static ArrayList<ArrayList<String>> trapDataBase = new ArrayList<>();
     public ArrayList<ArrayList<String>> monitorDataBase = new ArrayList<>();
@@ -60,10 +66,16 @@ public class ViewerController implements Initializable {
     //endregion
 
 
+    /**
+     * Metoda wykonująca się przy załadowaniu pliku XML'owego. Dodaje kolumny do tabel, rozpoczyna pracę z agentem
+     * Windowsowym SNMP, uruchamia wątki nasłuchujące.
+     * @param location
+     * @param resources
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         addTrapColumns();
-        client = new SimpleSnmpClient("udp:127.0.0.1/161");
+        client = new SnmpClient("udp:127.0.0.1/161");
         OIDstring = new String("");
         colsNames.add("Name/OID");
         colsNames.add("Value");
@@ -78,7 +90,6 @@ public class ViewerController implements Initializable {
         @Override
         public void run() {
             while (true) {
-                System.err.println("WĄTECZEK");
                 if (!trapDataBase.isEmpty()) {
                     ObservableList<String> ro;
                     ObservableList<ObservableList> data = FXCollections.observableArrayList();
@@ -107,10 +118,18 @@ public class ViewerController implements Initializable {
         }
     };
 
+    /**
+     * Akcja wykonująca się po naciśnięciu przycisku "Exit"
+     * @param event
+     */
     public void exitButtonAction(ActionEvent event){
         System.exit(0);
     }
 
+    /**
+     * Metoda dodająca kolumny do tabeli, w których będą pojawiać się powiadomienia TRAP, a także do tabeli
+     * monitora.
+     */
     public void addTrapColumns() {
         ArrayList<String> trapNames = new ArrayList<>();
         trapNames.add("requestID");
@@ -146,13 +165,19 @@ public class ViewerController implements Initializable {
         }
     }
 
+    /**
+     * Metoda odczytująca OID jako obiekt klasy String z okna.
+     * @param action
+     * @throws Exception
+     */
     public void readOID(ActionEvent action) throws Exception {
-
         OIDstring = oidText.getText();
-
-        System.out.println(OIDstring);
     }
 
+    /**
+     * Metoda służąca do wykonania operacji GetRequest.
+     * @throws IOException
+     */
     public void getAction() throws IOException {
         resultTable.getColumns().clear();
         OIDstring = oidText.getText();
@@ -180,6 +205,10 @@ public class ViewerController implements Initializable {
         resultTable.setItems(data);
     }
 
+    /**
+     * Metoda służąca do wykonania operacji GetNextRequest.
+     * @throws IOException
+     */
     public void getNextAction() throws IOException {
         resultTable.getColumns().clear();
         OIDstring = oidText.getText();
@@ -206,6 +235,10 @@ public class ViewerController implements Initializable {
         resultTable.setItems(data);
     }
 
+    /**
+     * Metoda służąca do wykonania operacji GetRequest i zaprezentowaniu wyników w postaci tabeli.
+     * @throws IOException
+     */
     public void getTableAction() throws IOException {
         resultTable.getColumns().clear();
         OIDstring = oidText.getText();
@@ -215,6 +248,10 @@ public class ViewerController implements Initializable {
         createTable();
     }
 
+    /**
+     * Metoda tworząca tabelę służącą do przedstawienia wyników operacji getTable.
+     * @throws IOException
+     */
     private void createTable() throws IOException {
         String tableOID = OIDstring;
         ObservableList<ObservableList> data = null;
@@ -251,9 +288,17 @@ public class ViewerController implements Initializable {
     }
 
 
+    /**
+     * Metoda dodająca obiekt o zadanym OID do monitora.
+     * @param event
+     * @throws IOException
+     */
     public void addToMonitor(ActionEvent event) throws IOException{
         if (!monitorOidText.getText().equals("")) {
-            oidBase.add(new OID(monitorOidText.getText()));
+            if(oidBase.size() == 0)
+                oidBase.add(new OID(monitorOidText.getText()));
+            else
+                oidBase.set(0,new OID(monitorOidText.getText()));
         }
     }
     Runnable run2 = new Runnable() {
@@ -274,6 +319,7 @@ public class ViewerController implements Initializable {
                         }
                         data.add(rows);
                     }
+
                     Platform.runLater(() -> {
                         monitorResultTable.setItems(data);
                     });

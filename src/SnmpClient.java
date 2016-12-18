@@ -1,4 +1,3 @@
-package sample;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,15 +16,21 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 import org.snmp4j.transport.TransportMappings;
 import org.snmp4j.util.*;
 
-public class SimpleSnmpClient {
+/**
+ * Klasa definiująca klienta SNMP wraz z całą jego funkcjonalnością.
+ */
+public class SnmpClient {
 
     private String address;
-
     private Snmp snmp;
     public int rows;
 
-
-    public SimpleSnmpClient(String address) {
+    /**
+     * Konstruktor klasy klienta SNMP, który za parametr wejściowy przyjmuje adres sieciowy, za pomocą którego
+     * będzie komunikował się z agentem Windowsowym.
+     * @param address
+     */
+    public SnmpClient(String address) {
         super();
         this.address = address;
         try {
@@ -35,10 +40,10 @@ public class SimpleSnmpClient {
         }
     }
 
-    public void stop() throws IOException {
-        snmp.close();
-    }
-
+    /**
+     * Metoda rozpoczynająca faktyczne działanie klienta SNMP; rozpoczyna nasłuchiwanie na powiadomienia TRAP.
+     * @throws IOException
+     */
     private void start() throws IOException {
         UdpAddress udpAddress = new UdpAddress("127.0.0.1/162");
         TransportMapping transport = new DefaultUdpTransportMapping(udpAddress);
@@ -64,7 +69,13 @@ public class SimpleSnmpClient {
     }
 
 
-
+    /**
+     * Metoda reprezentująca operację SNMP "getRequest", zwracająca rezultat tej operacji w postaci obiektu klasy
+     * ArrayList<String>
+     * @param oid Obiekt klasy OID, który chcemy wyświetlić
+     * @return Lista przechowująca informacje o zwracanym obiekcie
+     * @throws IOException
+     */
     public ArrayList<String> getAsString(OID oid) throws IOException {
         ResponseEvent event = get(new OID[]{oid});
         ArrayList<String> variable = new ArrayList<>();
@@ -76,15 +87,15 @@ public class SimpleSnmpClient {
         return variable;
     }
 
-    public String getOIDAsString(OID oid) throws IOException {
-        ResponseEvent event = get(new OID[]{oid});
-        return event.getResponse().get(0).getOid().toString();
-
-    }
-
+    /**
+     * Metoda reprezentująca operację SNMP "getNextRequest", zwracająca rezultat tej operacji w postaci obiektu klasy
+     * ArrayList<String>
+     * @param oid Obiekt klasy OID, który chcemy wyświetlić
+     * @return Lista przechowująca informacje o zwracanym obiekcie
+     * @throws IOException
+     */
     public ArrayList<String> getNextAsString(OID oid) throws IOException {
         ResponseEvent event = getNext(new OID[]{oid});
-        //System.err.println(event.getResponse().get(0).getVariable().getSyntaxString());
         ArrayList<String> variable = new ArrayList<>();
         variable.add(event.getResponse().get(0).getOid().toString());
         variable.add(event.getResponse().get(0).getVariable().toString());
@@ -94,20 +105,11 @@ public class SimpleSnmpClient {
         return variable;
     }
 
-    public String getNextOIDAsString(OID oid) throws IOException {
-        ResponseEvent event = getNext(new OID[]{oid});
-        return event.getResponse().get(0).getOid().toString();
-    }
-
-    public void getAsString(OID oids,ResponseListener listener) {
-        try {
-            snmp.send(getPDU(new OID[]{oids}), getTarget(),null, listener);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
+    /**
+     * Metoda zwracająca PDU, którego OID podajemy w parametrze wywołania. (operacja getRequest)
+     * @param oids
+     * @return PDU
+     */
     private PDU getPDU(OID oids[]) {
         PDU pdu = new PDU();
         for (OID oid : oids) {
@@ -118,6 +120,11 @@ public class SimpleSnmpClient {
         return pdu;
     }
 
+    /**
+     * Metoda zwracająca następne PDU po tym, którego OID podajemy w parametrze wywołania. (operacja getNextRequest)
+     * @param oids
+     * @return PDU
+     */
     private PDU getNextPDU(OID oids[]) {
         PDU pdu = new PDU();
         for (OID oid : oids) {
@@ -128,6 +135,12 @@ public class SimpleSnmpClient {
         return pdu;
     }
 
+    /**
+     * Metoda zwracająca zdarzenie, za pomocą którego będziemy uzyskiwać informacje o obiektach. (getRequest)
+     * @param oids Tablica OID obiektów, które chcemy przetwarzać
+     * @return ResponseEvent
+     * @throws IOException
+     */
     public ResponseEvent get(OID oids[]) throws IOException {
         ResponseEvent event = snmp.send(getPDU(oids), getTarget(), null);
         if(event != null) {
@@ -136,14 +149,24 @@ public class SimpleSnmpClient {
         throw new RuntimeException("GET timed out");
     }
 
+    /**
+     * Metoda zwracająca zdarzenie, za pomocą którego będziemy uzyskiwać informacje o obiektach. (getNextRequest)
+     * @param oids Tablica OID obiektów, które chcemy przetwarzać
+     * @return ResponseEvent
+     * @throws IOException
+     */
     public ResponseEvent getNext(OID oids[]) throws IOException {
         ResponseEvent event = snmp.send(getNextPDU(oids), getTarget(), null);
         if(event != null) {
             return event;
         }
-        throw new RuntimeException("GETNEXT timed out");
+        throw new RuntimeException("GET NEXT timed out");
     }
 
+    /**
+     * Metoda definiująca parametry "sesji" SNMP tj. wersja (2c), adres sieciowy, czas do timeoutu
+     * @return Obiekt klasy Target
+     */
     private Target getTarget() {
         Address targetAddress = GenericAddress.parse(address);
         CommunityTarget target = new CommunityTarget();
@@ -156,7 +179,9 @@ public class SimpleSnmpClient {
     }
 
     /**
-     * Normally this would return domain objects or something else than this...
+     * Metoda służąca do obsługiwania tabel z agenta SNMP.
+     * @param oids Tablica OID obiektów, które chcemy uzyskać; zwracane w postaci Stringów
+     * @return Struktura zawierająca wszystkie pola tabeli.
      */
     public List<List<String>> getTableAsStrings(OID[] oids) {
         rows = 0;
@@ -166,7 +191,6 @@ public class SimpleSnmpClient {
         List<TableEvent> events = tUtils.getTable(getTarget(), oids, null, null);
         List<List<String>> list = new ArrayList<>();
         for (TableEvent event : events) {
-            System.out.println("Event...");
             if(event.getIndex().toString().startsWith("1.1.")){
                 rows++;
             }
@@ -178,13 +202,8 @@ public class SimpleSnmpClient {
             list.add(strList);
             for(VariableBinding vb: event.getColumns()) {
                 strList.add(vb.getVariable().toString());
-                System.out.println("Dodaję: " + vb.getVariable().toString());
             }
         }
         return list;
-    }
-
-    public static String extractSingleString(ResponseEvent event) {
-        return event.getResponse().get(0).getVariable().toString();
     }
 }
